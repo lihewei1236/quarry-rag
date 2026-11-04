@@ -1,0 +1,46 @@
+[project]
+name = "quarry-rag-1"
+version = "0.1.0"
+description = "quarry-rag —— 只返回证据、可被任意上游复用的检索平台"
+requires-python = ">=3.11"
+
+dependencies = [
+    # Web 服务：本章的 /healthz，第八章的对外接口
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    # 数据库：业务代码用 asyncpg，Alembic 用 SQLAlchemy + psycopg2
+    "asyncpg>=0.30.0",
+    "alembic>=1.13.0",
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.9",
+    # 接入队列（第三章）与限流（第八章）
+    "redis>=5.0.0",
+    # 配置与日志
+    "pydantic>=2.8.0",
+    "pydantic-settings>=2.4.0",
+    "loguru>=0.7.0",
+    # 模型调用：向量化、抽取、裁判走 openai 的兼容客户端，重排走 httpx
+    "openai>=1.40.0",
+    "httpx>=0.27.0",
+    # 中文分词。锁到小版本：写入侧和查询侧的词典必须一致（第四章 4.2.5）
+    "jieba>=0.42.1,<0.43",
+    "python-multipart>=0.0.32",
+    "path>=17.1.1",
+]
+
+[project.optional-dependencies]
+parse = ["python-docx>=1.1"]
+dev   = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.6"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+

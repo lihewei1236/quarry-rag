@@ -1,0 +1,62 @@
+query,kind,gold_chunks,note
+香港旅遊業佔GDP比例是多少？,answerable,9cd3937937259839fcdb9e5b04849454,
+漓江在20元人民币的哪一面？,answerable,8d79913294d731ad8e645a7ad406491c,
+鼓浪屿为什么是世界遗产？,answerable,100e079efe40a2f9e48c67abb5647346,
+深圳怎么去？,answerable,219205cbe0cb52d08675b61d6fcd36f9,下一站
+三亚1月平均气温多少,answerable,0874c72e317b8ce4fc530a0913e520b1,了解
+洛阳有哪些著名景点？,answerable,c4a35fc9e645c2fa9cf17fb21e446c2b,了解
+哈尔滨地铁1号线途径哪些站？,answerable,70596f4c1c87c290904dc06aa639432b,交通 > 地铁
+广州白天鹅宾馆价格多少？,answerable,87c295ddfc4eb8429d6a53872310c530,住宿 > 高级豪华酒店
+香格里拉大饭店电话多少？,answerable,aebcdc0657fb12d74400286b07286595,住宿 > 高预算
+华西口腔医院地址在哪？,answerable,a6a807c6af34054706c5c5db6d93eac7,医疗
+北京出租车3公里内基价多少？,answerable,93fb53f74c0f8ab1fa7d9e643fa6ae08,周游 > 出租车
+台北市計程車起程價多少元？,answerable,9347a1dc61008963b689983076f5a87c,周遊 > 出租车
+四川大学望江校区地址,answerable,4cd81c7e887751ddcd8b7cf27c3bc5a2,学习
+松江大学城有哪些高校？,answerable,3b06b26c25c2782cb68bade3e3e3eec5,学习
+哈尔滨工业大学前身是什么？,answerable,f8609dbfa0cd0e5841d3ff735bf8bd33,学习
+哈尔滨冬天穿什么？,answerable,09ee6bcec43e13eded62167aed5544c1,安全
+香港国安法禁止哪些口号？,answerable,7fcca2c24767b03886d066ed96b6020f,尊重 > 國家安全法
+嶼巴有多少條路線？,answerable,7e7d86b9f17653ede2b0913accfa7ced,市內交通 > 公交 > 專營公交  服務 > 新大嶼山巴士（1973）有限公司（嶼巴）
+青岛地铁3号线途经哪些站点？,answerable,76938330ba6b0a577892807391839603,市内交通
+苏州汽车北站现在做什么用？,answerable,676fca37bc8c78c504a018e81884f2ae,抵达 > 客车
+310国道从西安哪里出境？,answerable,3fe9332cc90e257cbc6c3b4af3c69cd8,抵达 > 汽车 > 国省公路 > 国道
+张家界机场到市区坐大巴多少钱,answerable,45d281bb6d0852e444793ff528a97150,抵达 > 航空
+如何从上海虹桥机场到苏州？,answerable,aabc42d5976174b70bb7a5d1d0f496ce,抵达 > 航空
+青岛站地址在哪？,answerable,923ca19ab8b08e2d9a2a8fe7aa3d65e4,抵达 > 铁路
+三亚站到海口需要多久？,answerable,eb898818a21e000199ee09802205cc45,抵达 > 铁路
+京礼高速公路连接哪些城市？,answerable,d9c8b2278d092ceaab5a30f618dfea05,抵达 > 高速公路 > 城市高速公路
+昆明长水机场有飞往曼谷的航班吗？,answerable,c2a0370b361331ae0666a9384f091f47,抵達 > 航空
+哈尔滨啤酒节在哪举办？,answerable,5e1c83b8dc34ce95b1dde10a244ea50f,活动 > 节日 > 其他
+教育路日式餐厅怎么去？,answerable,29507db521902d4ce377cdc9a152394b,用餐 > 外国菜
+三亚群众街有什么特色小吃？,answerable,6bf14ea9cd81cca7c1e86f0f00a0f039,用餐 > 海南特色美食 > 三亚十条美食街
+水盆羊肉最地道的是哪里？,answerable,3f038a94b6e2caf10c00e26219c90d74,用餐 > 特色美食
+香港燒烤常用什麼工具？,answerable,94919f23409acb05e5c35c24c22bf7ff,用餐 > 餐廳類型 > 燒烤
+布达拉宫门票多少钱？,answerable,d44e8474e06869cccf512251d5412ee5,观光
+杭州有多少个5A级景区？,answerable,b5af805f04e38e8572d267b4c5bda6ee,观光
+天安门广场升旗时间,answerable,3736637688ffedb1f95752dd27958c45,观光 > 中心城区 > 广场
+石林门票多少钱？,answerable,8c409e8d9e978175cf2eea11ffd27ab9,观光 > 公园
+广济桥建于哪个朝代？,answerable,f9b60763f0729b475caa83fc327043ef,观光 > 大运河
+天门山索道站地址,answerable,542bb821cba692fd960abb77fa3aea76,观光 > 天门山
+八仙庵门票多少钱？,answerable,7bd5960cdc5217e74166aba3a103a727,观光 > 宗教旅游
+哈尔滨车辆厂旧址有什么纪念物？,answerable,4656c3ef61d755c01fe7e212f440f21c,观光 > 工业遗址
+大泽山风景名胜区在哪里？,answerable,152109b4d0d0e179fc73960ef2da6c25,观光 > 平度市
+大雁塔门票多少钱？,answerable,be025bc87e3bc3f7fd51545f1e205a91,观光 > 必游名胜
+大唐不夜城有什么特色？,answerable,129cb107a805b9a1e4a9ae0f7039d224,观光 > 曲江新区
+南沙湿地公园怎么去？,answerable,637bbe0ca21dc9eaec714001b48cc839,观光 > 自然景观
+三亚国际免税城营业时间,answerable,36732f1ada9cdf1e3899aab9f565d756,購物
+增槎路食品批发市场有什么,answerable,2aa79fc9cd43ccaf3c1876cb312831cf,購物 > 传统 > 特色街市/批发市场 > 食品
+上海早點四大金剛是什麼？,answerable,d505229ee20aa3de6e80099be7d708a4,飲食
+量子色动力学的渐近自由是什么,unanswerable,,完全无关：物理
+如何配置 Kubernetes 的 Ingress,unanswerable,,完全无关：运维
+房贷等额本息怎么换算,unanswerable,,完全无关：金融
+小狗拉肚子该喂什么药,unanswerable,,完全无关：宠物
+光合作用的暗反应发生在哪里,unanswerable,,完全无关：生物
+公司差旅住宿标准是多少,unanswerable,,沾边：企业制度在 corp-policy
+出差打车超过多少钱要发票,unanswerable,,沾边：企业制度在 corp-policy
+新员工什么时候领工牌,unanswerable,,沾边：内部笔记在 internal-notes
+生产环境权限要满几个月才能申请,unanswerable,,沾边：内部笔记在 internal-notes
+明天西安下不下雨,unanswerable,,沾边：实时数据，平台不做实时数据源
+冰岛看极光的团怎么报名,unanswerable,,沾边：旅行但不在语料覆盖的城市范围内
+这张景点照片是哪里拍的,unanswerable,,沾边：多模态，明确不做
+用英文介绍一下这座城市,unanswerable,,沾边：跨语言，明确不做
+asdkjfh qwoieur,unanswerable,,无意义输入

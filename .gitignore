@@ -1,0 +1,21 @@
+.env
+.venv/
+logs/
+snapshots/
+reports/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+# Local configuration and generated files
+.env
+.env.*
+!.env.example
+!.env.template
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.idea/
+node_modules/
+outputs/

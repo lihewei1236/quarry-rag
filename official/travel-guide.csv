@@ -1,0 +1,4 @@
+entity,aliases,attribute,qualifier,value,verified_at,source_url
+秦始皇帝陵博物院,兵马俑|兵马俑博物馆|秦始皇兵马俑博物馆,ticket_price,旺季,150,2026-09-01,https://example.com/official/bmy
+秦始皇帝陵博物院,兵马俑|兵马俑博物馆|秦始皇兵马俑博物馆,open_hours,旺季,08:30-18:00,2026-09-01,https://example.com/official/bmy
+大雁塔,大慈恩寺|大慈恩寺大雁塔,ticket_price,全年,50,2026-03-01,https://example.com/official/dyt

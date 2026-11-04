@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QUARRY-RAG 检索调试台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23D97757'/%3E%3Cpath d='M5 19V15H9V11H13V7H19V19Z' fill='white'/%3E%3C/svg%3E">
+<style>
+  :root {
+    /* 底色与文字 */
+    --bg:          #ffffff;
+    --panel:       #faf8f5;
+    --line:        #ebe6df;
+    --line-strong: #dad3c8;
+    --ink:         #1f1d1a;
+    --ink-2:       #5f5a52;
+    --ink-3:       #9c968d;
+
+    /* Claude 橙 */
+    --brand:        #d97757;
+    --brand-strong: #c15f3c;
+    --brand-deep:   #ad4f2e;
+    --brand-wash:   #fdf4ef;   /* 工具栏底色 */
+    --brand-soft:   #f8e0d5;   /* 选中的卡片 */
+    --brand-line:   #f0cebf;
+    --brand-ring:   rgba(217, 119, 87, .22);
+    --track:        #f7ebe5;   /* 耗时条底槽 */
+
+    /* 悬停联动 */
+    --sand:      #efe9e0;
+    --sand-line: #e0d6c7;
+
+    --ok:       #4b9a6b;
+    --err:      #b3412b;
+    --err-wash: #fcefeb;
+    --err-line: #f0c8bd;
+
+    --topbar-h: 56px;
+    --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+            "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas,
+            "Liberation Mono", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.5 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  [hidden] { display: none !important; }
+  .muted { color: var(--ink-3); }
+
+  /* ── 顶栏 ───────────────────────────────────── */
+  .topbar {
+    height: var(--topbar-h);
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 0 28px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .brand-mark { width: 24px; height: 24px; flex: none; display: block; }
+  .brand-name { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .06em; white-space: nowrap; }
+  .brand-sep { width: 1px; height: 14px; margin: 0 4px; background: var(--line-strong); }
+  .brand-page { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+
+  .status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+  .endpoint {
+    margin-right: 4px; padding-right: 12px;
+    border-right: 1px solid var(--line);
+    font-family: var(--mono); color: var(--ink-3);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); }
+  .status[data-kind="busy"] .dot { background: var(--brand); animation: pulse 1s ease-in-out infinite; }
+  .status[data-kind="ok"]   .dot { background: var(--ok); }
+  .status[data-kind="err"]  .dot { background: var(--err); }
+  .status[data-kind="err"]       { color: var(--err); }
+  @keyframes pulse { 50% { opacity: .25; } }
+
+  /* ── 主体 ───────────────────────────────────── */
+  .app {
+    height: calc(100vh - var(--topbar-h));
+    min-height: 600px;
+    display: flex; flex-direction: column; gap: 14px;
+    padding: 20px 28px 24px;
+  }
+
+  /* 参数栏 */
+  .toolbar {
+    flex: none;
+    display: flex; flex-wrap: wrap; gap: 10px;
+    margin: 0;
+    padding: 14px;
+    background: var(--brand-wash);
+    border: 1px solid var(--brand-line);
+    border-radius: 14px;
+  }
+  .field {
+    position: relative;
+    display: flex; align-items: center; gap: 12px;
+    height: 40px; padding: 0 12px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    cursor: text;
+    transition: border-color .12s, box-shadow .12s;
+  }
+  .field:hover { border-color: var(--line-strong); }
+  .field:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-ring); }
+  .field-label { flex: none; font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+  .field-label.code { font-family: var(--mono); }
+  .field input {
+    flex: 1; min-width: 0; width: 100%;
+    padding: 0; border: 0; outline: 0; background: transparent;
+    text-align: left; font-size: 13px;
+  }
+  .field input.code { font-family: var(--mono); }
+  .field input::placeholder { color: var(--ink-3); opacity: 1; }
+
+  .f-query  { flex: 4 1 280px; }
+  .f-query input { font-size: 14px; }
+  .f-coll   { flex: 1.2 1 170px; cursor: pointer; }
+  .f-labels { flex: 1 1 150px; }
+  .f-topk   { flex: 0 1 96px; }
+  .f-w      { flex: 0 1 120px; }
+
+  /* 集合下拉：原生 select 透明铺满整格，下面是右对齐的显示层 */
+  .select-view {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+    font: 13px var(--mono);
+  }
+  .select-view span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .select-view svg { flex: none; color: var(--ink-3); }
+  .f-coll select {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    opacity: 0; cursor: pointer;
+  }
+
+  .btn {
+    flex: 0 0 auto;
+    min-width: 128px; height: 40px; padding: 0 24px;
+    border: 0; border-radius: 9px;
+    background: var(--brand); color: #fff;
+    font-size: 14px; font-weight: 600;
+    letter-spacing: .12em; text-indent: .12em;
+    cursor: pointer;
+    transition: background-color .12s;
+  }
+  .btn:hover { background: var(--brand-strong); }
+  .btn:active { background: var(--brand-deep); }
+  .btn:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--brand-ring); }
+  .btn[aria-busy="true"] { background: var(--brand-strong); }
+
+  /* tsquery / 错误条 */
+  .tsq {
+    flex: none;
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 7px 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+  }
+  .tsq-tag {
+    flex: none;
+    padding: 0 7px;
+    border: 1px solid var(--brand-line);
+    border-radius: 5px;
+    background: var(--brand-wash);
+    color: var(--brand-strong);
+    font: 600 11px/18px var(--mono);
+  }
+  .tsq-val {
+    flex: 1; min-width: 0;
+    font: 12px/20px var(--mono);
+    white-space: nowrap; overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .tsq-val .muted { font-family: var(--sans); }
+  .tsq.is-error { background: var(--err-wash); border-color: var(--err-line); }
+  .tsq.is-error .tsq-tag { background: var(--err); border-color: var(--err); color: #fff; }
+  .tsq.is-error .tsq-val {
+    max-height: 84px; overflow-y: auto;
+    color: var(--err);
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+
+  /* ── 四列 ───────────────────────────────────── */
+  .columns {
+    flex: 1; min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.35fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 20px;
+    transition: opacity .12s;
+  }
+  .columns.is-busy  { opacity: .55; }
+  .columns.is-stale { opacity: .45; }
+
+  .col { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .col-head {
+    flex: none;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 12px; padding: 0 2px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .col-head h2 {
+    margin: 0;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 15px; font-weight: 700; white-space: nowrap;
+  }
+  .count {
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: #f3efe9;
+    color: var(--ink-2);
+    font: 500 11px/14px var(--mono);
+  }
+  .col-sub { min-width: 0; font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .col-sub.code { font-family: var(--mono); }
+
+  .col-body {
+    position: relative;               /* 卡片的 offsetTop 相对本列计算 */
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column; gap: 10px;
+    padding-bottom: 12px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+
+  /* 结果卡片 */
+  .hit {
+    flex: none;
+    padding: 13px 16px 12px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    cursor: pointer;
+    outline: 0;
+    transition: background-color .12s, border-color .12s;
+  }
+  .hit:hover { border-color: var(--line-strong); }
+  .hit:focus-visible { box-shadow: inset 0 0 0 2px var(--brand); }
+  /* 悬停：三列里同一个块一起浮现为沙色；点击后固定为橙色 */
+  .hit.is-linked   { background: var(--sand);       border-color: var(--sand-line); }
+  .hit.is-selected { background: var(--brand-soft); border-color: var(--brand-line); }
+
+  .hit-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  .rk { font-size: 13px; font-weight: 700; color: var(--brand-strong); }
+  .sc { font: 500 13px var(--mono); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .hit-text {
+    margin: 0;
+    font-size: 14px; line-height: 1.55;
+    overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  .ell { color: var(--ink-3); }
+  .hit-path { margin: 6px 0 0; font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hit.is-linked   .hit-path { color: #a0927f; }
+  .hit.is-selected .hit-path { color: #ab8676; }
+
+  .empty {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 112px; padding: 16px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 10px;
+    color: var(--ink-3); font-size: 12px; line-height: 1.7; text-align: center;
+  }
+
+  /* 详情 */
+  .detail-card {
+    flex: 0 1 auto; min-height: 0;
+    padding: 14px 18px 18px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+  .detail-empty { margin: 4px 0 0; font-size: 13px; line-height: 1.7; color: var(--ink-3); }
+
+  .kv { margin: 0; }
+  .kv-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 5px 0; }
+  .kv dt { flex: none; font: 12px/1.6 var(--mono); color: var(--ink-3); }
+  .kv dd { min-width: 0; margin: 0; text-align: right; font: 13px/1.6 var(--mono); overflow-wrap: anywhere; }
+  .kv dd.txt { font-family: var(--sans); }
+  .kv .na { font: 12px var(--sans); color: var(--ink-3); }
+  .kv-row.is-src dd { color: var(--brand-strong); font-weight: 600; }
+
+  .preview { margin-top: 10px; padding: 10px 12px; background: var(--panel); border-radius: 8px; }
+  .preview-label { margin-bottom: 4px; font: 11px var(--mono); color: var(--ink-3); }
+  .preview p { margin: 0; font-size: 13px; line-height: 1.75; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  /* 耗时 */
+  .timing { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--brand-line); }
+  .timing-title { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--brand-strong); }
+  .timing-rows {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 9px 14px;
+    font-size: 12px;
+  }
+  .timing-empty { grid-column: 1 / -1; color: var(--ink-3); }
+  .bar-label { color: var(--ink-2); white-space: nowrap; }
+  .bar { height: 8px; border-radius: 999px; background: var(--track); overflow: hidden; }
+  .bar i {
+    display: block; height: 100%;
+    border-radius: inherit;
+    background: var(--brand);
+    transform-origin: left center;
+    animation: grow .5s cubic-bezier(.2, .7, .2, 1) both;
+  }
+  .bar-val { min-width: 3.5em; text-align: right; font: 12px var(--mono); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .bar-label.is-total { color: var(--brand-strong); font-weight: 700; }
+  .bar.is-total i     { background: var(--brand-deep); }
+  .bar-val.is-total   { color: var(--ink); font-weight: 600; }
+  @keyframes grow { from { transform: scaleX(0); } }
+
+  /* ── 响应式 ─────────────────────────────────── */
+  @media (max-width: 1180px) {
+    .app { height: auto; min-height: 0; }
+    .f-query { flex-basis: 100%; }
+    .columns { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; }
+    .col-body { flex: none; max-height: 560px; }
+    .detail-card { flex: none; }
+  }
+  @media (max-width: 720px) {
+    .topbar { padding: 0 16px; }
+    .endpoint { display: none; }
+    .app { padding: 16px; }
+    .toolbar { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .f-query, .btn { grid-column: 1 / -1; }
+    .f-coll, .f-labels { grid-column: span 3; }
+    .f-topk, .f-w { grid-column: span 2; }
+    .btn { width: 100%; }
+    .columns { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 480px) {
+    .brand-sep, .brand-page { display: none; }
+    .f-coll { grid-column: 1 / -1; }
+    .f-labels, .f-topk, .f-w { grid-column: span 3; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+      <rect width="24" height="24" rx="6" fill="#D97757"/>
+      <path d="M5 19V15H9V11H13V7H19V19Z" fill="#fff"/>
+    </svg>
+    <h1 class="brand-name">QUARRY-RAG</h1>
+    <span class="brand-sep" aria-hidden="true"></span>
+    <span class="brand-page">检索调试台</span>
+  </div>
+  <div class="status" id="status" data-kind="idle" role="status" aria-live="polite">
+    <span class="endpoint">POST http://127.0.0.1:8100/debug/search</span>
+    <span class="dot" aria-hidden="true"></span>
+    <span id="status-text">就绪</span>
+  </div>
+</header>
+
+<main class="app">
+  <form class="toolbar" id="toolbar" autocomplete="off">
+    <label class="field f-query">
+      <span class="field-label">查询文本</span>
+      <input id="q" value="兵马俑的门票多少钱" placeholder="输入要检索的问题">
+    </label>
+    <label class="field f-coll">
+      <span class="field-label">集合</span>
+      <span class="select-view" aria-hidden="true">
+        <span id="coll-view"></span>
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <select id="coll">
+        <option>travel-guide</option>
+        <option>corp-policy</option>
+        <option>internal-notes</option>
+      </select>
+    </label>
+    <label class="field f-labels" title="多个标签用英文逗号分隔">
+      <span class="field-label">权限</span>
+      <input id="labels" class="code" value="public" placeholder="a,b">
+    </label>
+    <label class="field f-topk">
+      <span class="field-label code">top_k</span>
+      <input id="topk" class="code" value="10" inputmode="numeric">
+    </label>
+    <label class="field f-w">
+      <span class="field-label code">w_dense</span>
+      <input id="wd" class="code" value="0.5" inputmode="decimal">
+    </label>
+    <label class="field f-w">
+      <span class="field-label code">w_sparse</span>
+      <input id="ws" class="code" value="0.5" inputmode="decimal">
+    </label>
+    <button class="btn" id="go" type="submit">搜索</button>
+  </form>
+
+  <div class="tsq" id="tsq">
+    <span class="tsq-tag" id="tsq-tag" title="实际发给数据库的 tsquery">tsquery</span>
+    <div class="tsq-val" id="tsq-val"><span class="muted">搜索后显示实际发给数据库的 tsquery</span></div>
+  </div>
+
+  <section class="columns" id="columns">
+    <div class="col">
+      <div class="col-head">
+        <h2>Dense <em class="count" id="n-dense" hidden></em></h2>
+        <span class="col-sub">按向量距离</span>
+      </div>
+      <div class="col-body" id="col-dense"></div>
+    </div>
+
+    <div class="col">
+      <div class="col-head">
+        <h2>Sparse <em class="count" id="n-sparse" hidden></em></h2>
+        <span class="col-sub">按关键词打分</span>
+      </div>
+      <div class="col-body" id="col-sparse"></div>
+    </div>
+
+    <div class="col">
+      <div class="col-head">
+        <h2>融合 RRF <em class="count" id="n-merged" hidden></em></h2>
+        <span class="col-sub code" id="w-sub" title="w_dense / w_sparse"></span>
+      </div>
+      <div class="col-body" id="col-merged"></div>
+    </div>
+
+    <div class="col">
+      <div class="col-head">
+        <h2>详情</h2>
+        <span class="col-sub" id="detail-sub">未选中</span>
+      </div>
+      <div class="detail-card">
+        <div id="detail-body"></div>
+        <div class="timing">
+          <h3 class="timing-title">耗时（ms）</h3>
+          <div class="timing-rows" id="timing-rows"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+const COLS = [
+  { key: 'dense',  label: 'Dense',  body: 'col-dense',  count: 'n-dense',
+    idle: '按回车或点「搜索」开始检索',
+    none: '没有命中，检查集合和权限标签' },
+  { key: 'sparse', label: 'Sparse', body: 'col-sparse', count: 'n-sparse',
+    idle: '关键词召回的结果显示在这里',
+    none: '没有关键词命中，对照上方 tsquery 排查' },
+  { key: 'merged', label: 'RRF',    body: 'col-merged', count: 'n-merged',
+    idle: '两路融合后的排序显示在这里',
+    none: '两路都没有结果' },
+];
+
+const STAGES = [
+  ['lookup_ms',  '查集合'],
+  ['prepare_ms', '向量化+分词'],
+  ['sql_ms',     'SQL'],
+];
+
+const SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+
+let lastData = null;   // 最近一次成功的响应
+let selected = null;   // { cid, source }；重新搜索后该块若仍在结果里就保持选中，方便对比调权重前后的名次
+let reqSeq = 0;        // 只渲染最后一次请求的结果
+let inflight = null;
+
+async function search() {
+  const body = {
+    query: $('q').value,
+    collection: $('coll').value,
+    caller_labels: $('labels').value
+                     .split(',').map(s => s.trim()).filter(Boolean),
+    top_k: parseInt($('topk').value, 10),
+    weight_dense: parseFloat($('wd').value),
+    weight_sparse: parseFloat($('ws').value),
+  };
+  const weights = `${$('wd').value.trim()} / ${$('ws').value.trim()}`;
+
+  if (inflight) inflight.abort();
+  const ctrl = inflight = new AbortController();
+  const seq = ++reqSeq;
+  setBusy(true);
+
+  let data;
+  try {
+    const resp = await fetch('http://127.0.0.1:8100/debug/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    const raw = await resp.text();
+    if (!resp.ok) {
+      if (seq === reqSeq) showError(`HTTP ${resp.status}${raw.trim() ? '：' + raw.trim() : ''}`);
+      return;
+    }
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      if (seq === reqSeq) showError(`响应不是合法的 JSON：${raw.slice(0, 300)}`);
+      return;
+    }
+  } catch (err) {
+    if (seq === reqSeq) {
+      showError(`请求没有完成（${err && err.message ? err.message : err}），确认服务已启动后重试`);
+    }
+    return;
+  } finally {
+    if (seq === reqSeq) { setBusy(false); inflight = null; }
+  }
+  if (seq !== reqSeq) return;
+
+  lastData = data;
+  showTsquery(data.tsquery);
+  COLS.forEach(c => renderColumn(c, listOf(c.key)));
+  $('w-sub').textContent = weights;
+  renderTimings(data.timings);
+
+  const again = selected && findHit(selected.cid, selected.source);
+  if (again) choose(again.hit, again.source);
+  else clearSelection();
+
+  const total = num(data.timings && data.timings.total_ms);
+  setStatus('ok', total === null ? '完成' : `完成，用时 ${total.toFixed(1)} ms`);
+}
+
+/* ── 状态 ─────────────────────────────────────── */
+
+function setBusy(on) {
+  const btn = $('go');
+  btn.textContent = on ? '检索中…' : '搜索';
+  btn.setAttribute('aria-busy', String(on));
+  $('columns').classList.toggle('is-busy', on);
+  if (on) setStatus('busy', '检索中…');
+}
+
+function setStatus(kind, text) {
+  $('status').dataset.kind = kind;
+  $('status-text').textContent = text;
+}
+
+function showTsquery(tsq) {
+  $('tsq').classList.remove('is-error');
+  $('tsq-tag').textContent = 'tsquery';
+  $('columns').classList.remove('is-stale');
+  const v = $('tsq-val');
+  if (tsq === null || tsq === undefined || tsq === '') {
+    v.innerHTML = '<span class="muted">（空）</span>';
+  } else {
+    v.textContent = String(tsq);
+  }
+}
+
+// 出错时保留上一次结果，但整体压暗，避免误读
+function showError(msg) {
+  $('tsq').classList.add('is-error');
+  $('tsq-tag').textContent = '出错';
+  $('tsq-val').textContent = msg;
+  $('columns').classList.add('is-stale');
+  setStatus('err', '请求失败');
+}
+
+/* ── 结果列 ───────────────────────────────────── */
+
+function listOf(key) {
+  const v = lastData && lastData[key];
+  return Array.isArray(v) ? v : [];
+}
+
+function renderColumn(c, hits) {
+  const box = $(c.body);
+  const n = $(c.count);
+  n.textContent = hits.length;
+  n.hidden = false;
+  // 同一列统一小数位：最大分数 ≥10（BM25 一类）保留 2 位，否则 4 位（相似度、距离、RRF 不丢精度）
+  const digits = hits.some(h => Math.abs(num(h.score) ?? 0) >= 10) ? 2 : 4;
+  box.replaceChildren(...(hits.length ? hits.map(h => card(h, c.key, digits)) : [emptyBox(c.none)]));
+  box.scrollTop = 0;
+}
+
+function emptyBox(text) {
+  const d = document.createElement('div');
+  d.className = 'empty';
+  d.textContent = text;
+  return d;
+}
+
+function card(h, source, digits) {
+  const cid = String(h.chunk_id);   // 统一成字符串，数字 id 也能和 dataset 对上
+  const path = pathOf(h);
+  const el = document.createElement('article');
+  el.className = 'hit';
+  el.tabIndex = 0;
+  el.dataset.cid = cid;
+  el.innerHTML =
+      `<div class="hit-top"><span class="rk">#${esc(h.rk)}</span>`
+    + `<span class="sc" title="${esc(h.score)}">${fmtScore(h.score, digits)}</span></div>`
+    + `<p class="hit-text">${h.preview ? esc(h.preview) : '<span class="muted">（无预览）</span>'}</p>`
+    + `<p class="hit-path" title="${esc(path)}">${path ? esc(path) : '—'}</p>`;
+  el.addEventListener('click', () => choose(h, source));
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(h, source); }
+  });
+  el.addEventListener('mouseenter', () => link(cid));
+  el.addEventListener('mouseleave', () => link(null));
+  el.addEventListener('focus', () => link(cid));
+  el.addEventListener('blur', () => link(null));
+  return el;
+}
+
+// 同一个块在三列里一起高亮，这是这个页面最有用的一个交互
+function choose(h, source) {
+  const cid = String(h.chunk_id);
+  selected = { cid, source };
+  document.querySelectorAll('.hit').forEach(el => {
+    el.classList.toggle('is-selected', el.dataset.cid === cid);
+  });
+  COLS.forEach(c => {
+    const box = $(c.body);
+    const el = box.querySelector('.hit.is-selected');
+    if (el) reveal(box, el);
+  });
+  renderDetail(h, source);
+}
+
+// 悬停时的临时联动（沙色），不改变选中
+function link(cid) {
+  document.querySelectorAll('.hit').forEach(el => {
+    el.classList.toggle('is-linked', cid !== null && el.dataset.cid === cid);
+  });
+}
+
+function clearSelection() {
+  selected = null;
+  document.querySelectorAll('.hit.is-selected').forEach(el => el.classList.remove('is-selected'));
+  $('detail-sub').textContent = '未选中';
+  $('detail-body').innerHTML =
+    '<p class="detail-empty">点击左侧任意一条，三列中的同一个块会一起高亮。</p>';
+}
+
+// 选中块在其他列里被滚出视野时滚回来，只滚列内，不动整页
+function reveal(box, el) {
+  const top = el.offsetTop;
+  const bottom = top + el.offsetHeight;
+  if (top < box.scrollTop) {
+    box.scrollTo({ top: top - 6, behavior: SMOOTH });
+  } else if (bottom > box.scrollTop + box.clientHeight) {
+    box.scrollTo({ top: bottom - box.clientHeight + 6, behavior: SMOOTH });
+  }
+}
+
+function lookup(key, cid) {
+  return listOf(key).find(x => String(x.chunk_id) === cid) || null;
+}
+
+function findHit(cid, prefer) {
+  for (const key of [prefer, 'merged', 'dense', 'sparse']) {
+    const hit = lookup(key, cid);
+    if (hit) return { hit, source: key };
+  }
+  return null;
+}
+
+/* ── 详情 ─────────────────────────────────────── */
+
+function renderDetail(h, source) {
+  const cid = String(h.chunk_id);
+  const d = lookup('dense', cid);
+  const s = lookup('sparse', cid);
+  const m = lookup('merged', cid);
+  const col = COLS.find(c => c.key === source);
+  $('detail-sub').textContent = `选中 ${col ? col.label : ''} #${h.rk ?? '?'}`;
+
+  const NA = '<span class="na">未上榜</span>';
+  const DASH = '<span class="na">—</span>';
+  const has = (v) => v !== null && v !== undefined && v !== '';
+  const rows = [];
+  const row = (key, html, { src = false, txt = false } = {}) => rows.push(
+    `<div class="kv-row${src ? ' is-src' : ''}"><dt>${key}</dt>`
+    + `<dd${txt ? ' class="txt"' : ''}>${html}</dd></div>`);
+
+  row('chunk_id', esc(cid));
+  // 以下三个字段接口返回了才显示
+  if (has(h.collection_id)) row('collection_id', esc(h.collection_id));
+  if (has(h.level)) row('level', esc(h.level));
+  const path = pathOf(h);
+  row('heading_path', path ? esc(path) : DASH, { txt: true });
+
+  // 名次优先用接口给的 dense_rank / sparse_rank，没有再从对应列表里找
+  const dRank = h.dense_rank ?? (d && d.rk);
+  const sRank = h.sparse_rank ?? (s && s.rk);
+  row('dense_rank',   has(dRank) ? esc(dRank) : NA,    { src: source === 'dense' });
+  row('dense_score',  d ? esc(d.score) : DASH,         { src: source === 'dense' });
+  row('sparse_rank',  has(sRank) ? esc(sRank) : NA,    { src: source === 'sparse' });
+  row('sparse_score', s ? esc(s.score) : DASH,         { src: source === 'sparse' });
+  row('rrf_rank',     m && has(m.rk) ? esc(m.rk) : NA, { src: source === 'merged' });
+  row('rrf_score',    m ? esc(m.score) : DASH,         { src: source === 'merged' });
+
+  if (has(h.acl_labels)) {
+    const acl = Array.isArray(h.acl_labels) ? h.acl_labels.join(', ') : String(h.acl_labels);
+    row('acl_labels', acl ? esc(acl) : DASH);
+  }
+
+  const preview = has(h.preview)
+    ? `${esc(h.preview)}<span class="ell">…</span>`
+    : '<span class="muted">—</span>';
+
+  $('detail-body').innerHTML =
+      `<dl class="kv">${rows.join('')}</dl>`
+    + `<div class="preview"><div class="preview-label">preview</div><p>${preview}</p></div>`;
+}
+
+function renderTimings(t) {
+  const box = $('timing-rows');
+  if (!t) {
+    box.innerHTML = '<span class="timing-empty">搜索后显示各阶段耗时</span>';
+    return;
+  }
+  const total = num(t.total_ms);
+  let html = '';
+  for (const [key, label] of STAGES) html += barRow(label, num(t[key]), total, '');
+  html += barRow('总计', total, total, ' is-total');
+  box.innerHTML = html;
+}
+
+function barRow(label, v, total, cls) {
+  const pct = v !== null && total ? Math.max(0, Math.min(100, v / total * 100)) : 0;
+  const width = v > 0 ? `max(3px, ${pct.toFixed(2)}%)` : '0';
+  return `<span class="bar-label${cls}">${label}</span>`
+       + `<span class="bar${cls}"><i style="width:${width}"></i></span>`
+       + `<span class="bar-val${cls}">${v === null ? '—' : v.toFixed(1)}</span>`;
+}
+
+/* ── 工具函数 ─────────────────────────────────── */
+
+function pathOf(h) {
+  const p = h.heading_path;
+  if (Array.isArray(p)) return p.filter(x => x !== null && x !== '').join(' / ');
+  return p ? String(p) : '';
+}
+
+function num(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+// 卡片里显示的分数；完整值在悬停提示和详情里
+function fmtScore(v, digits = 4) {
+  const n = num(v);
+  if (n === null) return '—';
+  if (n !== 0 && Math.abs(n) < 0.5 * 10 ** -digits) return n.toExponential(2);
+  return n.toFixed(digits);
+}
+
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ── 初始化 ───────────────────────────────────── */
+
+function syncColl() { $('coll-view').textContent = $('coll').value; }
+
+$('toolbar').addEventListener('submit', (e) => { e.preventDefault(); search(); });
+$('coll').addEventListener('change', syncColl);
+window.addEventListener('pageshow', syncColl);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && selected) clearSelection();
+});
+
+syncColl();
+$('w-sub').textContent = `${$('wd').value} / ${$('ws').value}`;
+COLS.forEach(c => $(c.body).replaceChildren(emptyBox(c.idle)));
+clearSelection();
+renderTimings(null);
+</script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>评测报告</title>
+<style>
+:root {
+  --paper: #fffdfb; --surface: #fff; --surface-2: #fcf4f0; --tint: #ece3d7;
+  --ink: #1b1915; --muted: #8b8179;
+  --rule: #e8e0d9; --up: #2e7d64; --down: #c0482f; --warn: #a3762a;
+  --accent: #d97757; --accent-soft: #f6dcd0; --accent-line: #e8c3b2;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+/* 深色只在显式 <html data-theme="dark"> 时生效，系统深色模式不再自动切换 */
+:root[data-theme="dark"] {
+  --paper: #191715; --surface: #211e1c; --surface-2: #282422; --tint: #3b3531;
+  --ink: #f0ece8; --muted: #9c938c;
+  --rule: #38332f; --up: #5fbd9c; --down: #e5815f; --warn: #d4a44f;
+  --accent: #e08a68; --accent-soft: #3a2a22; --accent-line: #57392c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink); font-size: 15px; line-height: 1.6;
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 36px 20px 64px; }
+h1 { font-size: 23px; margin: 0; font-weight: 700; text-align: center; letter-spacing: .2px; }
+.sub { color: var(--muted); font-size: 12.5px; margin-top: 6px; text-align: center; }
+.headline { margin: 26px auto 0; font-size: clamp(18px, 2.3vw, 24px); font-weight: 500; line-height: 1.5;
+  max-width: 46ch; text-align: center; }
+.up { color: var(--up); } .down { color: var(--down); }
+.metrics { margin-top: 26px; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); }
+.metric { padding: 13px 15px; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; }
+.metric .name { font-size: 12px; color: var(--muted); }
+.metric .line { display: flex; align-items: baseline; gap: 8px; margin-top: 3px; }
+.metric .val { font-size: 21px; font-weight: 700; font-family: var(--mono); letter-spacing: -.02em; }
+.metric .delta { font-size: 12.5px; font-weight: 500; font-family: var(--mono); }
+.bar { height: 4px; background: var(--surface-2); margin-top: 10px; position: relative; border-radius: 999px; overflow: hidden; }
+.bar i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 999px; background: var(--accent); }
+.bar i.was { background: var(--tint); }
+.gate { display: flex; flex-wrap: wrap; gap: 10px; padding: 11px 15px; font-size: 13.5px; margin-top: 10px;
+  border: 1px solid var(--rule); border-radius: 10px; background: var(--surface-2); }
+.gate:empty, .metrics:empty { display: none; }
+.gate.pass { color: var(--up); } .gate.fail { color: var(--down); }
+.gate span { color: var(--muted); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 28px 0 14px; }
+.chip { font: inherit; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.chip:hover { border-color: var(--accent-line); background: var(--surface-2); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+.chip .n { color: var(--muted); margin-left: 6px; font-family: var(--mono); font-size: 12px; }
+.chip[aria-pressed="true"] .n { color: rgba(255, 255, 255, .72); }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+@media (min-width: 1000px) { .layout { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; } }
+.list { background: none; }
+.list-head, .row { display: grid; grid-template-columns: minmax(0, 1fr) 176px 92px 62px; align-items: center;
+  gap: 12px; padding: 0 16px; text-align: left; }
+.list-head { font-size: 12px; color: var(--muted); padding-bottom: 9px; }
+.row { width: 100%; font: inherit; color: inherit; cursor: pointer; padding: 11px 15px; margin-bottom: 8px;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; }
+.row:hover { background: var(--surface-2); border-color: var(--accent-line); }
+.row[aria-selected="true"] { background: var(--accent-soft); border-color: var(--accent-line); }
+.q { min-width: 0; }
+.q .text, .q .path { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.q .text { font-size: 14.5px; }
+.q .path { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.track { width: 176px; height: 20px; }
+.verdict { font-size: 11.5px; font-family: var(--mono); padding: 2px 9px; border-radius: 999px; display: inline-block; white-space: nowrap; }
+.v-supported { background: color-mix(in srgb, var(--up) 13%, transparent); color: var(--up); }
+.v-partial { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+.v-unsupported { background: color-mix(in srgb, var(--down) 13%, transparent); color: var(--down); }
+.v-none { color: var(--muted); }
+.ms { font-size: 12.5px; color: var(--muted); text-align: right; font-family: var(--mono); }
+.detail { border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); }
+@media (min-width: 1000px) { .detail { position: sticky; top: 20px; max-height: calc(100vh - 44px); overflow-y: auto; } }
+.detail-in { padding: 17px 18px 18px; }
+.detail h2 { font-size: 15.5px; margin: 0 0 5px; line-height: 1.45; font-weight: 600; }
+.detail-in > .gold { font-size: 12px; color: var(--muted); margin-bottom: 15px; }
+.run-block { border-top: 1px solid var(--rule); padding-top: 13px; margin-top: 13px; }
+.run-block:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+.run-name { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; }
+.ev { border-left: 2px solid var(--rule); padding: 7px 0 7px 11px; margin-top: 10px; font-size: 13px; }
+.ev.gold { border-left-color: var(--accent); }
+.ev .meta { font-size: 10.5px; color: var(--muted); font-family: var(--mono); display: flex; gap: 9px; flex-wrap: wrap; }
+.ev .snippet { margin-top: 4px; line-height: 1.65; white-space: pre-wrap; }
+.ph { background: var(--accent-soft); border-radius: 3px; padding: 0 4px; font-size: 12.5px; white-space: nowrap; }
+.facts { margin-top: 9px; display: flex; flex-direction: column; gap: 5px; }
+.fact { font-size: 12px; display: flex; gap: 7px; align-items: baseline; }
+.fact b { font-family: var(--mono); }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex: none; transform: translateY(-1px); }
+.d-verified { background: var(--up); } .d-expired { background: var(--warn); } .d-unverified { background: var(--tint); }
+.fact .old { color: var(--muted); }
+.judge-box { font-size: 12.5px; color: var(--muted); margin-top: 11px; }
+.empty { padding: 26px 4px; color: var(--muted); font-size: 13.5px; line-height: 1.75; }
+footer { margin-top: 32px; font-size: 12px; color: var(--muted); line-height: 1.8; }
+@media (max-width: 720px) {
+  .list-head { display: none; }
+  .row { grid-template-columns: minmax(0, 1fr) 96px; }
+  .track { width: 96px; }
+  .ms, .verdict-cell { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>评测报告</h1>
+  <div class="sub" id="sub"></div>
+  <p class="headline" id="headline"></p>
+  <section class="metrics" id="metrics"></section>
+  <div class="gate" id="gate"></div>
+  <div class="filters" id="filters"></div>
+  <div class="layout">
+    <section class="list">
+      <div class="list-head"><div>问题</div><div>名次变化</div><div>裁判</div><div>延迟</div></div>
+      <div id="rows"></div>
+    </section>
+    <aside class="detail"><div class="detail-in" id="detail"></div></aside>
+  </div>
+  <footer id="foot"></footer>
+</div>
+
+<script id="report-data" type="application/json">__DATA__</script>
+<script>
+const D = JSON.parse(document.getElementById("report-data").textContent);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const mark = s => esc(s).replace(/〔([^〕]+)〕/g, '<span class="ph">〔$1〕</span>');
+let filter = "all", selected = null;
+
+$("sub").textContent = `${D.collection} 集合 · 基线 ${D.base.run_id} · 对照 ${D.new.run_id} · 生成于 ${D.generated_at}`;
+$("headline").innerHTML = D.headline;
+$("metrics").innerHTML = D.metrics.map(m => `<div class="metric">
+  <div class="name">${esc(m.name)}</div>
+  <div class="line"><span class="val">${esc(m.new)}</span><span class="delta ${m.dir}">${esc(m.delta)}</span></div>
+  <div class="bar"><i class="was" style="width:${m.bar_base}%"></i><i style="width:${m.bar_new}%"></i></div>
+</div>`).join("");
+$("gate").className = "gate " + (D.gate.ok ? "pass" : "fail");
+$("gate").innerHTML = D.gate.ok
+  ? `回归闸门：✅ 通过<span>召回率、正确拒答率、证据支撑率都没有掉出阈值</span>`
+  : `回归闸门：❌ 不通过<span>${D.gate.problems.map(esc).join("；")}</span>`;
+$("foot").innerHTML = `基线配置 ${esc(D.base.config_text)}<br>对照配置 ${esc(D.new.config_text)}<br>`
+  + `名次轨道：空心点是基线名次，实心点是对照名次，最右一格表示金块没进前 ${D.top_k} 条。`;
+
+const FILTERS = [
+  { id: "all", name: "全部", test: () => true },
+  { id: "up", name: "变好", test: i => i.dir === "up" },
+  { id: "down", name: "变坏", test: i => i.dir === "down" },
+  { id: "miss", name: "未命中", test: i => i.kind === "answerable" && i.new.rank === null },
+  { id: "judge", name: "裁判存疑", test: i => i.new.judge && i.new.judge !== "supported" },
+  { id: "neg", name: "无答案", test: i => i.kind === "unanswerable" }
+];
+
+function track(item) {
+  const W = 176, H = 20, pad = 9, slots = D.top_k + 1, span = (W - pad * 2) / slots;
+  const x = r => pad + ((r === null ? D.top_k : r - 1) + .5) * span;
+  if (item.kind === "unanswerable")
+    return `<svg class="track" viewBox="0 0 ${W} ${H}"><text x="${pad}" y="14" font-size="11" fill="var(--muted)">${item.new.abstained ? "建议拒答" : "没有拒答"}</text></svg>`;
+  const color = item.dir === "up" ? "var(--up)" : item.dir === "down" ? "var(--down)" : "var(--muted)";
+  const ticks = Array.from({ length: slots }, (_, i) =>
+    `<circle cx="${x(i === D.top_k ? null : i + 1)}" cy="10" r="1" fill="var(--rule)"/>`).join("");
+  return `<svg class="track" viewBox="0 0 ${W} ${H}" role="img" aria-label="基线 ${item.base.rank ?? "未命中"}，对照 ${item.new.rank ?? "未命中"}">
+    <line x1="${pad}" y1="10" x2="${W - pad}" y2="10" stroke="var(--rule)"/>${ticks}
+    <line x1="${x(item.base.rank)}" y1="10" x2="${x(item.new.rank)}" y2="10" stroke="${color}" stroke-width="2.5"/>
+    <circle cx="${x(item.base.rank)}" cy="10" r="4" fill="var(--surface)" stroke="${color}" stroke-width="1.5"/>
+    <circle cx="${x(item.new.rank)}" cy="10" r="4.5" fill="${color}"/></svg>`;
+}
+
+function renderFilters() {
+  $("filters").innerHTML = FILTERS.map(f =>
+    `<button class="chip" aria-pressed="${filter === f.id}" data-f="${f.id}">${f.name}<span class="n">${D.items.filter(f.test).length}</span></button>`).join("");
+  $("filters").querySelectorAll("button").forEach(b => b.onclick = () => { filter = b.dataset.f; renderFilters(); renderRows(); });
+}
+
+function renderRows() {
+  const rows = D.items.filter(FILTERS.find(f => f.id === filter).test);
+  $("rows").innerHTML = rows.length ? rows.map(i => `<button class="row" aria-selected="${selected === i.qid}" data-id="${i.qid}">
+      <span class="q"><span class="text">${esc(i.query)}</span><span class="path">${esc(i.note || "语料里没有对应内容")}</span></span>
+      ${track(i)}
+      <span class="verdict-cell">${i.new.judge ? `<span class="verdict v-${i.new.judge}">${i.new.judge}</span>` : `<span class="verdict v-none">—</span>`}</span>
+      <span class="ms">${i.new.ms}</span>
+    </button>`).join("") : `<div class="empty">这个筛选下没有问题。</div>`;
+  $("rows").querySelectorAll(".row").forEach(r => r.onclick = () => { selected = r.dataset.id; renderRows(); renderDetail(); });
+}
+
+function runBlock(item, side) {
+  const run = D[side], r = item[side];
+  const head = item.kind === "unanswerable"
+    ? (r.abstained ? "建议拒答" : "没有拒答")
+    : (r.rank ? `金块第 ${r.rank} 条` : `金块未进前 ${D.top_k}`);
+  const evs = r.evidence.length ? r.evidence.map((e, n) => `<div class="ev ${e.gold ? "gold" : ""}">
+      <div class="meta"><span>第 ${n + 1} 条</span><span>${esc(e.path)}</span><span>${esc(e.level)}</span>${e.gold ? "<span>金块</span>" : ""}</div>
+      <div class="snippet">${mark(e.text)}</div>
+      ${e.facts.length ? `<div class="facts">${e.facts.map(f => `<div class="fact"><span class="dot d-${f.status}"></span><span>${esc(f.ref)} ${esc(f.entity)} ${esc(f.label)}·${esc(f.qualifier)} = <b>${esc(f.value)}</b> ${f.verified_at ? "核实于 " + esc(f.verified_at) : "未核实"}${f.written.length ? `<span class="old">（正文写的是 ${esc(f.written.join("、"))}）</span>` : ""}</span></div>`).join("")}</div>` : ""}
+    </div>`).join("") : `<div class="ev"><div class="snippet">没有返回证据。</div></div>`;
+  return `<div class="run-block">
+    <div class="run-name"><span>${esc(run.label)}</span><span>${head} · ${r.ms} ms</span></div>
+    ${evs}
+    ${r.judge ? `<div class="judge-box">裁判：<span class="verdict v-${r.judge}">${r.judge}</span> ${esc(r.judge_reason || "")}</div>` : ""}
+  </div>`;
+}
+
+function renderDetail() {
+  const item = D.items.find(i => i.qid === selected);
+  $("detail").innerHTML = item
+    ? `<h2>${esc(item.query)}</h2><div class="gold">${item.note ? "金块：" + esc(item.note) : "无答案问题"}</div>${runBlock(item, "base")}${runBlock(item, "new")}`
+    : `<div class="empty">选一道题，看看两次运行分别返回了什么证据。<br><br>先看"变坏"里的几条：多数时候不是检索退步，而是另一个块其实也能答。</div>`;
+}
+
+renderFilters(); renderRows(); renderDetail();
+</script>
+</body>
+</html>
